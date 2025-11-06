@@ -13,7 +13,7 @@
 
 using namespace std;
 
-// ---- Konfigūracija ----
+// ---- config ----
 static const string VERSION_ = "v0.1";
 static const int USERS_COUNT = 1000;
 static const int64_t TX_COUNT = 10000;
