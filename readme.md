@@ -31,16 +31,6 @@ pridėtas mempool’o (neapdorotų transakcijų) valymas.
 
 Programavimo kalba: C++20
 
-Naudojamos bibliotekos:
-
-"<iostream>", "<vector>", "<unordered_map>", "<unordered_set>" – duomenų struktūros
-
-"<chrono>", "<random>" – laikas ir atsitiktinumai
-
-"<iomanip>", "<sstream>" – formatavimas
-
-"<algorithm>", "<numeric>" – rūšiavimas, skaičiavimai
-
 💡 Pagrindinės sąvokos
 Sąvoka	Paaiškinimas
 Transaction (transakcija)	Pervedimas tarp vartotojų (siuntėjas, gavėjas, suma, ID).
