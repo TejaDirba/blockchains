@@ -33,13 +33,13 @@ Programavimo kalba: C++20
 
 Naudojamos bibliotekos:
 
-<iostream>, <vector>, <unordered_map>, <unordered_set> – duomenų struktūros
+"<iostream>", "<vector>", "<unordered_map>", "<unordered_set>" – duomenų struktūros
 
-<chrono>, <random> – laikas ir atsitiktinumai
+"<chrono>", "<random>" – laikas ir atsitiktinumai
 
-<iomanip>, <sstream> – formatavimas
+"<iomanip>", "<sstream>" – formatavimas
 
-<algorithm>, <numeric> – rūšiavimas, skaičiavimai
+"<algorithm>", "<numeric>" – rūšiavimas, skaičiavimai
 
 💡 Pagrindinės sąvokos
 Sąvoka	Paaiškinimas
