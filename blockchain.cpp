@@ -1,517 +1,401 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <unordered_map>
-#include <algorithm>
-#include <random>
+#include <map>
 #include <ctime>
-#include <iomanip>
 #include <sstream>
-#include <cstdint>
+#include <iomanip>
 
-using std::string;
-using std::vector;
-using std::cout;
-using std::endl;
+using namespace std;
 
-class CustomHash {
-private:
-    static const uint64_t INIT_A = 0x428a2f98d728ae22ULL;
-    static const uint64_t INIT_B = 0x7137449123ef65cdULL;
-    static const uint64_t INIT_C = 0xb5c0fbcfec4d3b2fULL;
-    static const uint64_t INIT_D = 0xe9b5dba58189dbbcULL;
-    static const uint64_t PRIME1 = 0x9e3779b185ebca87ULL;
-    static const uint64_t PRIME2 = 0xc2b2ae3d27d4eb4fULL;
-    static const uint64_t PRIME3 = 0x165667b19e3779f9ULL;
-    static const uint64_t PRIME4 = 0x85ebca77c2b2ae63ULL;
-    
-    static uint64_t rotateLeft(uint64_t v, int s) {
-        return (v << s) | (v >> (64 - s));
-    }
-    
-    static uint64_t rotateRight(uint64_t v, int s) {
-        return (v >> s) | (v << (64 - s));
-    }
-    
-    static uint64_t mix(uint64_t a, uint64_t b, uint64_t c) {
-        a ^= b;
-        a = rotateLeft(a, 23);
-        a *= PRIME1;
-        a ^= c;
-        return rotateLeft(a, 41);
-    }
-
+class Hash {
 public:
-    static string hash(const string& input) {
-        uint64_t h1 = INIT_A, h2 = INIT_B, h3 = INIT_C, h4 = INIT_D;
-        size_t len = input.length();
+    static string calculate(const string& text) {
+        unsigned long long h = 5381;
         
-        for (size_t i = 0; i < len; i++) {
-            uint64_t b = static_cast<uint64_t>(static_cast<unsigned char>(input[i])) 
-                        ^ ((i + 1) * PRIME1);
-            
-            h1 ^= b * PRIME1;
-            h1 = rotateLeft(h1, 13);
-            h1 *= PRIME2;
-            
-            h2 ^= b * PRIME2;
-            h2 = rotateRight(h2, 17);
-            h2 += h1;
-            
-            h3 ^= b * PRIME3;
-            h3 = rotateLeft(h3, 31);
-            h3 ^= h2;
-            
-            h4 ^= b * PRIME4;
-            h4 = rotateRight(h4, 19);
-            h4 += h3;
-            
-            if (i % 4 == 3) {
-                h1 = mix(h1, h2, h3);
-                h2 = mix(h2, h3, h4);
-                h3 = mix(h3, h4, h1);
-                h4 = mix(h4, h1, h2);
-            }
+        for (char c : text) {
+            h = ((h << 5) + h) + c; // h * 33 + c
         }
         
-        h1 ^= len * PRIME1;
-        h2 ^= len * PRIME2;
-        h3 ^= len * PRIME3;
-        h4 ^= len * PRIME4;
+        // Padarom 64 simbolių ilgio hex stringą
+        stringstream ss;
+        ss << hex << setfill('0') << setw(16) << h;
+        string result = ss.str();
         
-        h1 = mix(h1, h2, h3);
-        h2 = mix(h2, h3, h4);
-        h3 = mix(h3, h4, h1);
-        h4 = mix(h4, h1, h2);
-        
-        h1 += h2 + h3 + h4;
-        h2 += h1;
-        h3 += h1;
-        h4 += h1;
-        
-        std::stringstream ss;
-        ss << std::hex << std::setfill('0')
-           << std::setw(16) << h1
-           << std::setw(16) << h2
-           << std::setw(16) << h3
-           << std::setw(16) << h4;
-        
-        return ss.str();
+        // Prailginam iki 64 simbolių
+        while (result.length() < 64) {
+            result += result;
+        }
+        return result.substr(0, 64);
     }
 };
 
-string getTimestamp() {
-    std::time_t now = std::time(nullptr);
-    char buf[100];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-    return string(buf);
-}
-
-void printSeparator(char c = '=', int len = 80) {
-    cout << string(len, c) << endl;
-}
-
-void printHeader(const string& text) {
-    printSeparator();
-    cout << "  " << text << endl;
-    printSeparator();
-}
-
+// ============================================================================
+// 2. TRANSAKCIJA (PINIGŲ PERVEDIMAS)
+// Pvz: Jonas siunčia Petrai 100 eurų
+// ============================================================================
 
 class Transaction {
-private:
-    string txId;
-    string sender;
-    string receiver;
-    uint64_t amount;
-
 public:
-    Transaction(const string& from, const string& to, uint64_t amt) 
-        : sender(from), receiver(to), amount(amt) {
-        string data = from + "|" + to + "|" + std::to_string(amt);
-        txId = CustomHash::hash(data);
+    string id;          // Unikalus ID
+    string from;        // Kas siunčia
+    string to;          // Kas gauna
+    int amount;         // Kiek siunčia
+    
+    // Konstruktorius - sukuria naują transakciją
+    Transaction(string sender, string receiver, int money) {
+        from = sender;
+        to = receiver;
+        amount = money;
+        
+        // ID = hash iš visų duomenų
+        string data = from + to + std::to_string(amount);
+        id = Hash::calculate(data);
     }
-
-    string getId() const { return txId; }
-    string getSender() const { return sender; }
-    string getReceiver() const { return receiver; }
-    uint64_t getAmount() const { return amount; }
-
-    void print(int index = -1) const {
-        if (index >= 0) {
-            cout << "    [TX " << index << "] ";
-        } else {
-            cout << "    ";
-        }
-        cout << sender.substr(0, 12) << "... -> " 
-             << receiver.substr(0, 12) << "... : " 
-             << amount << " units" << endl;
+    
+    // Atspausdinti gražiai
+    void print() {
+        cout << "      " << from.substr(0, 10) << "... -> " 
+             << to.substr(0, 10) << "... : " << amount << " EUR\n";
     }
 };
 
-class BlockHeader {
-private:
-    string prevBlockHash;
-    uint64_t timestamp;
-    uint32_t version;
-    string txRootHash;
-    uint64_t nonce;
-    string difficulty;
-
-public:
-    BlockHeader() : timestamp(0), version(1), nonce(0), difficulty("000") {
-        prevBlockHash = string(64, '0');
-    }
-
-    void setPrevHash(const string& hash) { prevBlockHash = hash; }
-    void setTimestamp(uint64_t ts) { timestamp = ts; }
-    void setVersion(uint32_t v) { version = v; }
-    void setTxRootHash(const string& hash) { txRootHash = hash; }
-    void setNonce(uint64_t n) { nonce = n; }
-    void setDifficulty(const string& diff) { difficulty = diff; }
-
-    string getPrevHash() const { return prevBlockHash; }
-    uint64_t getTimestamp() const { return timestamp; }
-    uint32_t getVersion() const { return version; }
-    string getTxRootHash() const { return txRootHash; }
-    uint64_t getNonce() const { return nonce; }
-    string getDifficulty() const { return difficulty; }
-
-    string computeHash() const {
-        string data = prevBlockHash + "|" +
-                     std::to_string(timestamp) + "|" +
-                     std::to_string(version) + "|" +
-                     txRootHash + "|" +
-                     difficulty + "|" +
-                     std::to_string(nonce);
-        return CustomHash::hash(data);
-    }
-};
+// ============================================================================
+// 3. BLOKAS
+// Tai kaip "dėžė" su daug transakcijų viduje
+// ============================================================================
 
 class Block {
-private:
-    BlockHeader header;
-    vector<Transaction> transactions;
-    string blockHash;
-    int blockNumber;
-
 public:
-    Block(int num) : blockNumber(num) {}
-
-    BlockHeader& getHeader() { return header; }
-    const BlockHeader& getHeader() const { return header; }
+    int number;                      // Bloko numeris (0, 1, 2, ...)
+    string previousHash;             // Ankstesnio bloko hash
+    vector<Transaction> transactions; // Transakcijos
+    long timestamp;                  // Kada sukurtas
+    int nonce;                       // "Magic" skaičius mining'ui
+    string hash;                     // Šio bloko hash
     
-    void addTransaction(const Transaction& tx) {
+    // Konstruktorius
+    Block(int num, string prevHash) {
+        number = num;
+        previousHash = prevHash;
+        timestamp = time(nullptr);
+        nonce = 0;
+        hash = "";
+    }
+    
+    // Pridėti transakciją
+    void addTransaction(Transaction tx) {
         transactions.push_back(tx);
     }
-
-    const vector<Transaction>& getTransactions() const {
-        return transactions;
-    }
-
-    void computeTxRootHash() {
-        string combined;
-        for (const auto& tx : transactions) {
-            combined += tx.getId();
+    
+    // Apskaičiuoti bloko hash
+    string calculateHash() {
+        // Sujungiame visus duomenis
+        string data = previousHash + 
+                     std::to_string(timestamp) + 
+                     std::to_string(nonce);
+        
+        // Pridedame visas transakcijas
+        for (auto& tx : transactions) {
+            data += tx.id;
         }
-        string root = CustomHash::hash(combined);
-        header.setTxRootHash(root);
+        
+        return Hash::calculate(data);
     }
-
-    bool mine(uint64_t maxIterations = 10000000) {
-        string target = header.getDifficulty();
+    
+    // MINING - ieškome hash'o, kuris prasideda "000"
+    bool mine() {
+        cout << "\n  Mining block #" << number << "...\n";
+        cout << "      Transactions: " << transactions.size() << "\n";
+        cout << "      Looking for hash starting with 000...\n";
         
-        cout << "\n  Mining block #" << blockNumber << "..." << endl;
-        cout << "     Target: " << target << "..." << endl;
-        cout << "     Transactions: " << transactions.size() << endl;
+        time_t startTime = time(nullptr);
         
-        auto startTime = std::time(nullptr);
-        
-        for (uint64_t i = 0; i < maxIterations; i++) {
-            header.setNonce(i);
-            blockHash = header.computeHash();
+        // Bandome skirtingus nonce, kol radom tinkamą hash
+        for (nonce = 0; nonce < 10000000; nonce++) {
+            hash = calculateHash();
             
-            if (blockHash.substr(0, target.length()) == target) {
-                auto endTime = std::time(nullptr);
-                cout << "  Block mined successfully!" << endl;
-                cout << "     Nonce: " << i << endl;
-                cout << "     Hash: " << blockHash.substr(0, 20) << "..." << endl;
-                cout << "     Time: " << (endTime - startTime) << " seconds" << endl;
+            // Ar hash prasideda "000"?
+            if (hash[0] == '0' && hash[1] == '0' && hash[2] == '0') {
+                time_t endTime = time(nullptr);
+                cout << "  Block mined!\n";
+                cout << "      Nonce: " << nonce << "\n";
+                cout << "      Hash: " << hash.substr(0, 16) << "...\n";
+                cout << "      Time taken: " << (endTime - startTime) << " sec.\n";
                 return true;
             }
             
-            if (i % 100000 == 0 && i > 0) {
-                cout << "     Attempts: " << i << "..." << endl;
+            // Kas 100k bandymų - parodom progress
+            if (nonce % 100000 == 0 && nonce > 0) {
+                cout << "      Bandymas: " << nonce << "...\n";
             }
         }
         
-        cout << "  Mining failed after " << maxIterations << " attempts" << endl;
+        cout << "  Mining failed\n";
         return false;
     }
-
-    string getHash() const { return blockHash; }
-    int getNumber() const { return blockNumber; }
-
-    void print() const {
-        printSeparator('-', 80);
-        cout << "  BLOCK #" << blockNumber << endl;
-        printSeparator('-', 80);
-        cout << "  Hash: " << blockHash.substr(0, 24) << "..." << endl;
-        cout << "  Previous Hash: " << header.getPrevHash().substr(0, 24) << "..." << endl;
-        cout << "  Timestamp: " << getTimestamp() << endl;
-        cout << "  Nonce: " << header.getNonce() << endl;
-        cout << "  Difficulty: " << header.getDifficulty() << endl;
-        cout << "  Transactions: " << transactions.size() << endl;
-        cout << "  TX Root Hash: " << header.getTxRootHash().substr(0, 24) << "..." << endl;
-        cout << "\n  First 5 Transactions:" << endl;
+    
+    // Atspausdinti bloko info
+    void print() {
+        cout << "\n  ╔════════════════════════════════════════════════════════════╗\n";
+        cout << "  ║  BLOKAS #" << number << "\n";
+        cout << "  ╚════════════════════════════════════════════════════════════╝\n";
+        cout << "    Hash:     " << hash.substr(0, 20) << "...\n";
+        cout << "    Prev:     " << previousHash.substr(0, 20) << "...\n";
+        cout << "    Nonce:    " << nonce << "\n";
+        cout << "    TX count: " << transactions.size() << "\n";
+        cout << "\n    Pirmos 3 transakcijos:\n";
         
-        int displayCount = std::min((int)transactions.size(), 5);
-        for (int i = 0; i < displayCount; i++) {
-            transactions[i].print(i);
+        for (int i = 0; i < min(3, (int)transactions.size()); i++) {
+            transactions[i].print();
         }
-        if (transactions.size() > 5) {
-            cout << "    ... and " << (transactions.size() - 5) << " more" << endl;
+        
+        if (transactions.size() > 3) {
+            cout << "      ... ir dar " << (transactions.size() - 3) << " transakcijų\n";
         }
     }
 };
+
+
 
 class User {
-private:
+public:
     string name;
     string publicKey;
-    uint64_t balance;
-
-public:
-    User() : name(""), publicKey(""), balance(0) {}
+    int balance;
     
-    User(const string& n, const string& pk, uint64_t bal) 
-        : name(n), publicKey(pk), balance(bal) {}
-
-    string getName() const { return name; }
-    string getPublicKey() const { return publicKey; }
-    uint64_t getBalance() const { return balance; }
+    User() {
+        name = "";
+        publicKey = "";
+        balance = 0;
+    }
     
-    void setBalance(uint64_t bal) { balance = bal; }
-    void addBalance(uint64_t amt) { balance += amt; }
-    bool subtractBalance(uint64_t amt) {
-        if (balance >= amt) {
-            balance -= amt;
-            return true;
-        }
-        return false;
+    User(string n, string key, int bal) {
+        name = n;
+        publicKey = key;
+        balance = bal;
     }
 };
 
+// ============================================================================
+// 5. BLOCKCHAIN (Visa sistema)
+// ============================================================================
+
 class Blockchain {
-private:
-    vector<Block> chain;
-    vector<Transaction> mempool;
-    std::unordered_map<string, User> users;
-    string difficulty;
-    int txPerBlock;
-
-    string generatePublicKey(std::mt19937_64& rng) {
-        string key = "pk_";
-        for (int i = 0; i < 24; i++) {
-            int val = rng() % 16;
-            key += "0123456789abcdef"[val];
-        }
-        return key;
-    }
-
-    string generateName(std::mt19937_64& rng) {
-        static const vector<string> names = {
-            "Aiste", "Mantas", "Ieva", "Lukas", "Ugne", 
-            "Tomas", "Goda", "Kasparas", "Emilija", "Jonas",
-            "Paulius", "Gabija", "Domas", "Austeja", "Matas"
-        };
-        return names[rng() % names.size()] + "_" + std::to_string(rng() % 100000);
-    }
-
 public:
-    Blockchain(const string& diff = "000", int txPerBlk = 100) 
-        : difficulty(diff), txPerBlock(txPerBlk) {}
-
-    void generateUsers(int count) {
-        printHeader("GENERATING USERS");
-        cout << "  Creating " << count << " users..." << endl;
+    vector<Block> chain;              // Blokų grandinė
+    vector<Transaction> mempool;      // Laukiančios transakcijos
+    map<string, User> users;          // Visi vartotojai
+    
+    // Konstruktorius
+    Blockchain() {
+        cout << "\n  Creating blockchain system...\n";
+    }
+    
+    // ŽINGSNIS 1: Sukurti vartotojus
+    void createUsers(int count) {
+        cout << "\n  ----------------------------------------\n";
+        cout << "  CREATING USERS\n";
+        cout << "  ----------------------------------------\n";
         
-        std::mt19937_64 rng(123456789);
-        std::uniform_int_distribution<uint64_t> balanceDist(100, 1000000);
+        vector<string> names = {
+            "Alice", "Bob", "Charlie", "David", "Eve",
+            "Frank", "Grace", "Henry", "Ivy", "Jack"
+        };
         
         for (int i = 0; i < count; i++) {
-            string pk = generatePublicKey(rng);
-            string name = generateName(rng);
-            uint64_t balance = balanceDist(rng);
+            // Sugeneruojame public key
+            string key = "user_" + std::to_string(i);
             
-            users[pk] = User(name, pk, balance);
+            // Atsitiktinis vardas
+            string name = names[i % names.size()] + std::to_string(i);
+            
+            // Atsitiktinis balansas 100-1000
+            int balance = 100 + (rand() % 900);
+            
+            users[key] = User(name, key, balance);
         }
         
-        cout << "  Generated " << users.size() << " users" << endl;
-        cout << "\n  Sample users:" << endl;
+        cout << "  Created " << users.size() << " users\n\n";
         
+        // Parodome pirmus 5
+        cout << "  Pavyzdžiai:\n";
         int shown = 0;
-        for (const auto& pair : users) {
+        for (auto& pair : users) {
             if (shown++ >= 5) break;
-            cout << "    " << pair.second.getName() 
-                 << " (" << pair.first.substr(0, 16) << "...) : "
-                 << pair.second.getBalance() << " units" << endl;
+            cout << "    " << pair.second.name 
+                 << " - " << pair.second.balance << " EUR\n";
         }
     }
-
-    void generateTransactions(int count) {
-        printHeader("GENERATING TRANSACTIONS");
-        cout << "  Creating " << count << " transactions..." << endl;
+    
+    // ŽINGSNIS 2: Sukurti transakcijas
+    void createTransactions(int count) {
+        cout << "\n  ----------------------------------------\n";
+        cout << "  CREATING TRANSACTIONS\n";
+        cout << "  ----------------------------------------\n";
         
-        if (users.size() < 2) {
-            cout << "  Not enough users!" << endl;
-            return;
-        }
-        
+        // Padarome user keys listą
         vector<string> keys;
-        for (const auto& pair : users) {
+        for (auto& pair : users) {
             keys.push_back(pair.first);
         }
         
-        std::mt19937_64 rng(987654321);
-        std::uniform_int_distribution<size_t> userDist(0, keys.size() - 1);
-        std::uniform_int_distribution<uint64_t> amountDist(1, 50000);
-        
         for (int i = 0; i < count; i++) {
-            string sender = keys[userDist(rng)];
-            string receiver = keys[userDist(rng)];
+            // Atsitiktinis siuntėjas ir gavėjas
+            string sender = keys[rand() % keys.size()];
+            string receiver = keys[rand() % keys.size()];
             
+            // Jei tas pats - ieškome kito
             while (receiver == sender) {
-                receiver = keys[userDist(rng)];
+                receiver = keys[rand() % keys.size()];
             }
             
-            uint64_t amount = amountDist(rng);
+            // Atsitiktinė suma
+            int amount = 1 + (rand() % 100);
+            
             mempool.push_back(Transaction(sender, receiver, amount));
         }
         
-        cout << "  Generated " << mempool.size() << " transactions" << endl;
-        cout << "\n  Sample transactions:" << endl;
+        cout << "  Created " << mempool.size() << " transactions\n\n";
         
-        for (int i = 0; i < std::min(5, (int)mempool.size()); i++) {
-            mempool[i].print(i);
+        // Parodome pirmas 3
+        cout << "  Pavyzdžiai:\n";
+        for (int i = 0; i < min(3, (int)mempool.size()); i++) {
+            mempool[i].print();
         }
     }
-
-    void mineNextBlock() {
+    
+    // ŽINGSNIS 3: Iškasti naują bloką
+    void mineBlock() {
         if (mempool.empty()) {
-            cout << "\n  Mempool is empty!" << endl;
+            cout << "\n  Mempool is empty - no transactions!\n";
             return;
         }
         
-        printHeader("MINING NEW BLOCK");
+        cout << "\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        cout << "  ⛏️  NAUJAS BLOKAS\n";
+        cout << "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
         
-        vector<Transaction> selectedTx;
-        int toTake = std::min(txPerBlock, (int)mempool.size());
-        
-        std::sort(mempool.begin(), mempool.end(), 
-                 [](const Transaction& a, const Transaction& b) {
-                     return a.getAmount() > b.getAmount();
-                 });
-        
-        for (int i = 0; i < toTake; i++) {
-            selectedTx.push_back(mempool[i]);
+        // Nustatome previous hash
+        string prevHash = "0000000000000000000000000000000000000000000000000000000000000000";
+        if (!chain.empty()) {
+            prevHash = chain.back().hash;
         }
         
-        int blockNum = chain.size();
-        Block newBlock(blockNum);
+        // Kuriame naują bloką
+        Block newBlock(chain.size(), prevHash);
         
-        if (blockNum == 0) {
-            newBlock.getHeader().setPrevHash(string(64, '0'));
-        } else {
-            newBlock.getHeader().setPrevHash(chain.back().getHash());
+        // Įdedame iki 10 transakcijų
+        int txCount = min(10, (int)mempool.size());
+        for (int i = 0; i < txCount; i++) {
+            newBlock.addTransaction(mempool[i]);
         }
         
-        newBlock.getHeader().setTimestamp(std::time(nullptr));
-        newBlock.getHeader().setVersion(1);
-        newBlock.getHeader().setDifficulty(difficulty);
-        
-        for (const auto& tx : selectedTx) {
-            newBlock.addTransaction(tx);
-        }
-        
-        newBlock.computeTxRootHash();
-        
+        // Kasome bloką
         if (newBlock.mine()) {
-            applyBlock(newBlock);
+            // Pritaikome transakcijas (atnaujiname balansus)
+            applyTransactions(newBlock);
+            
+            // Pridedame į grandinę
             chain.push_back(newBlock);
-            mempool.erase(mempool.begin(), mempool.begin() + toTake);
+            
+            // Išmetame iš mempool
+            mempool.erase(mempool.begin(), mempool.begin() + txCount);
+            
+            cout << "\n  ✅ Blokas #" << newBlock.number << " pridėtas į grandinę!\n";
         }
     }
-
-    void applyBlock(const Block& block) {
-        cout << "\n  Applying transactions..." << endl;
+    
+    // Pritaikome transakcijas (atnaujiname balansus)
+    void applyTransactions(Block& block) {
+        cout << "\n  Updating balances...\n";
         
-        for (const auto& tx : block.getTransactions()) {
-            string sender = tx.getSender();
-            string receiver = tx.getReceiver();
-            uint64_t amount = tx.getAmount();
-            
-            if (users.find(sender) != users.end() && 
-                users.find(receiver) != users.end()) {
-                
-                if (users[sender].getBalance() >= amount) {
-                    users[sender].subtractBalance(amount);
-                    users[receiver].addBalance(amount);
+        for (auto& tx : block.transactions) {
+            // Jei abu vartotojai egzistuoja
+            if (users.count(tx.from) && users.count(tx.to)) {
+                // Patikriname ar siuntėjas turi pakankamai
+                if (users[tx.from].balance >= tx.amount) {
+                    users[tx.from].balance -= tx.amount;
+                    users[tx.to].balance += tx.amount;
                 }
             }
         }
         
-        cout << "  Transactions applied" << endl;
+        cout << "  Balances updated\n";
     }
-
-    void printSummary() const {
-        printHeader("BLOCKCHAIN SUMMARY");
-        cout << "  Total Blocks: " << chain.size() << endl;
-        cout << "  Remaining Transactions: " << mempool.size() << endl;
-        cout << "  Total Users: " << users.size() << endl;
-        cout << "  Difficulty: " << difficulty << endl;
+    
+    // Parodyti statistiką
+    void printStats() {
+        cout << "\n  ----------------------------------------\n";
+        cout << "  BLOCKCHAIN STATISTICS\n";
+        cout << "  ----------------------------------------\n";
+        cout << "    Blokų grandinės ilgis: " << chain.size() << "\n";
+        cout << "    Laukiančių transakcijų: " << mempool.size() << "\n";
+        cout << "    Vartotojų: " << users.size() << "\n";
         
         if (!chain.empty()) {
-            cout << "\n  Latest Block:" << endl;
-            cout << "    Number: " << chain.back().getNumber() << endl;
-            cout << "    Hash: " << chain.back().getHash().substr(0, 24) << "..." << endl;
-            cout << "    Transactions: " << chain.back().getTransactions().size() << endl;
+            cout << "\n    Paskutinis blokas:\n";
+            cout << "      Numeris: #" << chain.back().number << "\n";
+            cout << "      Hash: " << chain.back().hash.substr(0, 20) << "...\n";
+            cout << "      Transakcijų: " << chain.back().transactions.size() << "\n";
         }
     }
-
-    int getMempoolSize() const { return mempool.size(); }
+    
+    // Parodyti visą grandinę
+    void printChain() {
+        cout << "\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        cout << "  🔗 BLOKŲ GRANDINĖ\n";
+        cout << "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        
+        for (auto& block : chain) {
+            block.print();
+        }
+    }
 };
 
+// ============================================================================
+// MAIN - PROGRAMA PRASIDEDA ČIA
+// ============================================================================
+
 int main() {
-    printHeader("BLOCKCHAIN v0.1 - CENTRALIZED SIMULATION");
-    
-    cout << "\n  Starting blockchain simulation..." << endl;
-    cout << "  Timestamp: " << getTimestamp() << endl;
-    
-    Blockchain blockchain("000", 100);
-    
-    blockchain.generateUsers(1000);
-    blockchain.generateTransactions(10000);
+    // Nustatome random seed
+    srand(time(nullptr));
     
     cout << "\n";
-    printHeader("STARTING MINING PROCESS");
+    cout << "  ========================================================\n";
+    cout << "                   BLOCKCHAIN v0.1                           \n";
+    cout << "  ========================================================\n";
     
-    for (int i = 0; i < 10 && blockchain.getMempoolSize() > 0; i++) {
-        blockchain.mineNextBlock();
-        
-        if ((i + 1) % 2 == 0) {
-            cout << "\n  Progress: " << (i + 1) << " blocks mined" << endl;
-        }
+    // Sukuriame blockchain sistemą
+    Blockchain blockchain;
+    
+    // 1. Sukuriame vartotojus (100 vartotojų)
+    blockchain.createUsers(100);
+    
+    // 2. Sukuriame transakcijas (50 transakcijų)
+    blockchain.createTransactions(50);
+    
+    // 3. Kasome 5 blokus
+    cout << "\n\n";
+    cout << "  ========================================================\n";
+    cout << "                   STARTING TO MINE BLOCKS                    \n";
+    cout << "  ========================================================\n";
+    
+    for (int i = 0; i < 5 && blockchain.mempool.size() > 0; i++) {
+        blockchain.mineBlock();
     }
     
-    cout << "\n";
-    blockchain.printSummary();
+    // 4. Parodome rezultatus
+    cout << "\n\n";
+    blockchain.printStats();
     
-    printSeparator();
-    cout << "  Blockchain simulation completed!" << endl;
-    printSeparator();
+    // 5. (Neprivaloma) Parodome visą grandinę
+    // blockchain.printChain();
+    
+    cout << "\n\n";
+    cout << "  ========================================================\n";
+    cout << "                   PROGRAM COMPLETED                         \n";
+    cout << "  ========================================================\n\n";
     
     return 0;
 }
-
-
