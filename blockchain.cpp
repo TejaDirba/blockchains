@@ -6,13 +6,10 @@
 #include <random>
 #include <ctime>
 #include <cstdint>
-#include <sstream>
-#include <iomanip>
 
 using std::string;
 using std::vector;
 
-// ============ Simple 256-bit hash (your CustomHash) ============
 class CustomHash {
 private:
     static const uint64_t INIT_A = 0x428a2f98d728ae22ULL;
