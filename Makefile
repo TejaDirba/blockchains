@@ -1,10 +1,15 @@
 CXX := g++
 CXXFLAGS := -O2 -std=c++20 -Wall -Wextra
 
-all: mini_chain
+TARGET := blockchain
 
-mini_chain: blockchain_simple.cpp custom_hash.hpp user.hpp tx.hpp block.hpp
-	$(CXX) $(CXXFLAGS) blockchain_simple.cpp -o $@
+all: $(TARGET)
+
+$(TARGET): blockchain.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@
 
 clean:
-	rm -f mini_chain
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
