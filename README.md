@@ -1,4 +1,6 @@
 # Supaprastinta Blokų Grandinė (Blockchain) — v0.1
+<img width="1074" height="366" alt="Screenshot 2025-11-06 114805" src="https://github.com/user-attachments/assets/74267acb-16a7-4738-abd7-d4800eaee73a" />
+<img width="1077" height="323" alt="Screenshot 2025-11-06 114820" src="https://github.com/user-attachments/assets/e0d6e7dd-c102-47a2-9f7e-8de51aaceb2f" />
 
 Ši programa įgyvendina **supaprastintą blokų grandinės modelį** (pagal užduotį *„Supaprastintos blokų grandinės kūrimas“*).
 
@@ -63,8 +65,7 @@ Sistemoje realizuojamas:
 ### Windows
 g++ -O2 -std=c++20 blockchain.cpp -o blockchain.exe
 blockchain.exe
-<img width="1074" height="366" alt="Screenshot 2025-11-06 114805" src="https://github.com/user-attachments/assets/74267acb-16a7-4738-abd7-d4800eaee73a" />
-<img width="1077" height="323" alt="Screenshot 2025-11-06 114820" src="https://github.com/user-attachments/assets/e0d6e7dd-c102-47a2-9f7e-8de51aaceb2f" />
+
 
 ### Linux / macOS
 ```bash
