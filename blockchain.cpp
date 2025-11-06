@@ -13,18 +13,18 @@
 
 using namespace std;
 
-// ---- Config ----
+// ---- Konfigūracija ----
 static const string VERSION_ = "v0.1";
 static const int USERS_COUNT = 1000;
 static const int64_t TX_COUNT = 10000;
 static const int TXS_PER_BLOCK = 100;              // ~100 tx per block
-static const string DIFFICULTY_PREFIX = "000";     // PoW target
+static const string DIFFICULTY_PREFIX = "000";     // PoW tikslas
 static const uint64_t RNG_SEED = 42;
-static const string MINER_PK = "pk_miner_demo";    // coinbase receiver
-static const int64_t BLOCK_REWARD = 50;            // coinbase reward
-static optional<int> MAX_BLOCKS_TO_MINE = nullopt; // set to value to limit mined blocks
+static const string MINER_PK = "pk_miner_demo";    // coinbase gavėjas
+static const int64_t BLOCK_REWARD = 50;            // coinbase atlygis
+static optional<int> MAX_BLOCKS_TO_MINE = nullopt; // nustatyti ribą iškastiems blokams
 
-// ---- Utils ----
+// ---- Pagalbinės funkcijos ----
 static bool starts_with(const string& s, const string& pref) {
     return s.size() >= pref.size() && equal(pref.begin(), pref.end(), s.begin());
 }
@@ -35,7 +35,7 @@ static string to_hex16(uint64_t x) {
     return ss.str();
 }
 
-// Simple deterministic 256-bit string hash (toy, not cryptographic)
+// Paprastas deterministinis 256 bitų hash (mokomasis, ne kriptografinis)
 string custom_hash(const string& input) {
     uint64_t part0 = 0x1234567890abcdefULL;
     uint64_t part1 = 0xfedcba0987654321ULL;
@@ -71,7 +71,7 @@ string custom_hash(const string& input) {
     return ss.str();
 }
 
-// ---- Data structures ----
+// ---- Duomenų struktūros ----
 struct User {
     string name;
     string public_key;
@@ -93,11 +93,11 @@ struct Transaction {
 };
 
 struct BlockHeader {
-    string prev_block_hash;   // genesis: 64 zeros
-    double timestamp;         // seconds since epoch
+    string prev_block_hash;   // genesis: 64 nuliai
+    double timestamp;         // sekundės nuo epoch
     string version;           // "v0.1"
-    string transactions_hash; // hash of concatenated txids (naive root)
-    string difficulty;        // e.g., "000"
+    string transactions_hash; // transakcijų root (paprastas): sujungtų txid hash
+    string difficulty;        // pvz. "000"
     uint64_t nonce = 0;
 
     string to_string() const {
@@ -153,11 +153,11 @@ public:
         cout << "[TX] pending=" << pending.size() << "\n\n";
     }
 
-    // mine next block: coinbase + top-by-amount policy
+    // iškasti kitą bloką: coinbase + policy pagal didžiausią sumą
     optional<Block> mine_next_block(int txs_per_block = TXS_PER_BLOCK) {
         if (pending.empty()) { cout << "[MINE] no pending tx\n"; return nullopt; }
 
-        // --- policy: top by amount ---
+    // --- policy: pasirinkimas pagal didžiausią sumą ---
         vector<int> idx(pending.size());
         iota(idx.begin(), idx.end(), 0);
         sort(idx.begin(), idx.end(), [&](int a, int b){
@@ -167,11 +167,11 @@ public:
         vector<Transaction> txs; txs.reserve(k + 1);
         for (int i = 0; i < k; ++i) txs.push_back(pending[idx[i]]);
 
-        // coinbase first
+    // coinbase pirmas
         Transaction coinbase("BLOCK_REWARD", MINER_PK, BLOCK_REWARD);
         txs.insert(txs.begin(), coinbase);
 
-        // naive "root": hash of concatenated txids
+    // paprastas "root": sujungtų txid hash
         string add_ids; add_ids.reserve(txs.size() * 65);
         for (auto& tx : txs) { add_ids += tx.transaction_id; add_ids += '|'; }
         string txs_hash = custom_hash(add_ids);
@@ -207,15 +207,15 @@ public:
             ++block.header.nonce;
         }
 
-        // chain tip check
+        // patikriname ar grandinės galva nepasikeitė
         if (block.header.prev_block_hash != last_block_hash()) {
-            cerr << "[ERROR] chain tip changed; aborting block\n";
+            cerr << "[ERROR] grandinės galva pasikeitė; bloko atmetimas\n";
             return nullopt;
         }
 
-        // apply effects
-        apply_transactions(block.transactions);
-        erase_used_transactions(block.transactions);
+    // pritaikome poveikį balansams ir pašaliname panaudotas tx iš mempool
+    apply_transactions(block.transactions);
+    erase_used_transactions(block.transactions);
 
         blocks.push_back(std::move(block));
         cout << "[CHAIN] added block#" << (blocks.size()-1)
@@ -260,10 +260,10 @@ private:
 
     void create_genesis_block() {
         BlockHeader header{
-            string(64, '0'),   // prev = 64 zeros
+            string(64, '0'),   // prev = 64 nuliai
             current_time_seconds(),
             VERSION_,
-            string(64, '0'),   // tx root placeholder for genesis
+            string(64, '0'),   // tx root vieta genesis blokui
             DIFFICULTY_PREFIX,
             0
         };
