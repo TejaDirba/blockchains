@@ -30,11 +30,6 @@ public:
     }
 };
 
-// ============================================================================
-// 2. TRANSAKCIJA (PINIGŲ PERVEDIMAS)
-// Pvz: Jonas siunčia Petrai 100 eurų
-// ============================================================================
-
 class Transaction {
 public:
     string id;          // Unikalus ID
@@ -59,11 +54,6 @@ public:
              << to.substr(0, 10) << "... : " << amount << " EUR\n";
     }
 };
-
-// ============================================================================
-// 3. BLOKAS
-// Tai kaip "dėžė" su daug transakcijų viduje
-// ============================================================================
 
 class Block {
 public:
@@ -111,11 +101,9 @@ public:
         
         time_t startTime = time(nullptr);
         
-        // Bandome skirtingus nonce, kol radom tinkamą hash
         for (nonce = 0; nonce < 10000000; nonce++) {
             hash = calculateHash();
             
-            // Ar hash prasideda "000"?
             if (hash[0] == '0' && hash[1] == '0' && hash[2] == '0') {
                 time_t endTime = time(nullptr);
                 cout << "  Block mined!\n";
@@ -125,7 +113,6 @@ public:
                 return true;
             }
             
-            // Kas 100k bandymų - parodom progress
             if (nonce % 100000 == 0 && nonce > 0) {
                 cout << "      Bandymas: " << nonce << "...\n";
             }
@@ -176,10 +163,6 @@ public:
         balance = bal;
     }
 };
-
-// ============================================================================
-// 5. BLOCKCHAIN (Visa sistema)
-// ============================================================================
 
 class Blockchain {
 public:
@@ -311,9 +294,7 @@ public:
         cout << "\n  Updating balances...\n";
         
         for (auto& tx : block.transactions) {
-            // Jei abu vartotojai egzistuoja
             if (users.count(tx.from) && users.count(tx.to)) {
-                // Patikriname ar siuntėjas turi pakankamai
                 if (users[tx.from].balance >= tx.amount) {
                     users[tx.from].balance -= tx.amount;
                     users[tx.to].balance += tx.amount;
@@ -343,9 +324,9 @@ public:
     
     // Parodyti visą grandinę
     void printChain() {
-        cout << "\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-        cout << "  🔗 BLOKŲ GRANDINĖ\n";
-        cout << "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        cout << "\n  ----------------------------------------\n";
+        cout << "  BLOCKCHAIN\n";
+        cout << "  ----------------------------------------\n";
         
         for (auto& block : chain) {
             block.print();
@@ -353,12 +334,7 @@ public:
     }
 };
 
-// ============================================================================
-// MAIN - PROGRAMA PRASIDEDA ČIA
-// ============================================================================
-
 int main() {
-    // Nustatome random seed
     srand(time(nullptr));
     
     cout << "\n";
@@ -366,16 +342,11 @@ int main() {
     cout << "                   BLOCKCHAIN v0.1                           \n";
     cout << "  ========================================================\n";
     
-    // Sukuriame blockchain sistemą
     Blockchain blockchain;
-    
-    // 1. Sukuriame vartotojus (100 vartotojų)
     blockchain.createUsers(100);
-    
-    // 2. Sukuriame transakcijas (50 transakcijų)
     blockchain.createTransactions(50);
     
-    // 3. Kasome 5 blokus
+
     cout << "\n\n";
     cout << "  ========================================================\n";
     cout << "                   STARTING TO MINE BLOCKS                    \n";
@@ -385,12 +356,8 @@ int main() {
         blockchain.mineBlock();
     }
     
-    // 4. Parodome rezultatus
     cout << "\n\n";
     blockchain.printStats();
-    
-    // 5. (Neprivaloma) Parodome visą grandinę
-    // blockchain.printChain();
     
     cout << "\n\n";
     cout << "  ========================================================\n";
